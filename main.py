@@ -60,11 +60,11 @@ def crc_slow(message, nBytes):
     return (reflect(remainder, WIDTH) ^ FINAL_XOR_VALUE)
 
 
-def crc_fast(message, nBytes):
+def crc_fast(message):
     remainder = INITIAL_REMAINDER
-    for byte in message[:nBytes]:
+    for byte in message:
         data = reflect(byte, 8) ^ (remainder >> (WIDTH - 8))
-        remainder = crcTable[data] ^ (remainder << 8)
+        remainder = crcTable[data] ^ ctypes.c_uint32(remainder << 8).value
     return (reflect(remainder, WIDTH) ^ FINAL_XOR_VALUE)
 
 
