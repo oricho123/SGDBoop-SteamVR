@@ -30,12 +30,12 @@ crcTable = [0] * 256
 def crc_init():
     global crcTable
     for dividend in range(256):
-        remainder = (dividend << (WIDTH - 8)) & 0xFFFFFFFF
+        remainder = ctypes.c_uint32(dividend << (WIDTH - 8)).value & 0xFFFFFFFF
         for bit in range(8, 0, -1):
             if remainder & TOPBIT:
-                remainder = (remainder << 1) ^ POLYNOMIAL
+                remainder = ctypes.c_uint32(remainder << 1).value ^ POLYNOMIAL
             else:
-                remainder = (remainder << 1)
+                remainder = ctypes.c_uint32(remainder << 1).value
         crcTable[dividend] = remainder
 
 
