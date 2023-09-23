@@ -485,12 +485,11 @@ def get_non_steam_apps(include_mods):
             # Load the vdf in memory and fix string-related issues
             while current_file_byte < len(file_content):
                 if file_content[current_file_byte] == 0x00:
-                    real_file_content = real_file_content[:current_file_byte] + b'\x03' + real_file_content[
+                    file_content = file_content[:current_file_byte] + b'\x03' + file_content[
                                                                                           current_file_byte + 1:]
                 current_file_byte += 1
 
-            real_file_content += b'\x08\x03'
-
+            file_content = file_content[:-2] + b'\x08\x03'
             parsing_char = file_content
             parsing_appid = bytearray()
             int_bytes = [0, 0, 0, 0]
@@ -501,11 +500,11 @@ def get_non_steam_apps(include_mods):
                 appid = 0
 
                 # Find app name
-                name_start_char = re.search(b"\x01AppName(.+)\x03", parsing_char).group(1)
+                name_start_char = re.search(b"\x01appname(.+)\x03", parsing_char).group(1)
                 name_end_char = name_start_char.find(b"\x03")
 
                 # Find exe path
-                exe_start_char = re.search(b"\001exe(.+)\x03", parsing_char).group(1)
+                exe_start_char = re.search(b"\x01exe(.+)\x03", parsing_char).group(1)
                 exe_end_char = exe_start_char.find(b"\x03")
 
                 appid_ptr = re.search(b"\x02appid", parsing_char)
