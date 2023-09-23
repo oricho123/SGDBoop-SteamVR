@@ -500,19 +500,19 @@ def get_non_steam_apps(include_mods):
                 appid = 0
 
                 # Find app name
-                name_start_char = re.search(b"\x01appname(.+)\x03", parsing_char).group(1)
-                name_end_char = name_start_char.find(b"\x03")
-
+                game_name = re.search(b"(?<=AppName\x03)(.*?)(?=\s*\x03)", parsing_char).group()
                 # Find exe path
-                exe_start_char = re.search(b"\x01exe(.+)\x03", parsing_char).group(1)
-                exe_end_char = exe_start_char.find(b"\x03")
+                exe_path = re.search(b"(?<=Exe\x03)(.*?)(?=\s*\x03)", parsing_char).group()
 
-                appid_ptr = re.search(b"\x02appid", parsing_char)
-                app_block_end_ptr = parsing_char.find(b"\x08", appid_ptr) + 1
+                appid_index = parsing_char.find(b"\x02appid")
+                appid_ptr = parsing_char[appid_index:]
+
+                app_block_end_index = re.search(b"\x08\x00|\x08\x03",parsing_char).start()
+                app_block_end_ptr = parsing_char[app_block_end_index + 1:]
 
                 # If appid was found in this app block
-                if appid_ptr > 0 and appid_ptr < app_block_end_ptr:
-                    hex_bytes = real_file_content[appid_ptr + 7:appid_ptr + 11]
+                if appid_index > 0 and appid_index < app_block_end_index:
+                    hex_bytes = real_file_content[appid_index + 7:appid_index + 11]
                     int_bytes[0] = hex_bytes[3]
                     int_bytes[1] = hex_bytes[2]
                     int_bytes[2] = hex_bytes[1]
@@ -524,12 +524,12 @@ def get_non_steam_apps(include_mods):
                              (int_bytes[3]))
 
                 # Calculate old app id
-                name_end_char = name_end_char.decode("utf-8")
-                exe_end_char = exe_end_char.decode("utf-8")
+                # name_end_char = game_name.decode("utf-8")
+                # exe_end_char = exe_path.decode("utf-8")
 
-                parsing_appid.extend(exe_start_char)
-                parsing_appid.extend(name_start_char)
-                appid_old = crc_fast(parsing_appid.decode("utf-8"))
+                parsing_appid.extend(exe_path)
+                parsing_appid.extend(game_name)
+                appid_old = crc_fast(parsing_appid)
 
                 if appid == 0:
                     appid = appid_old
@@ -537,10 +537,10 @@ def get_non_steam_apps(include_mods):
                 # Do math magic. Valve pls fix
                 appid = ((appid | 0x80000000) << 32 | 0x02000000) >> 32
                 appid_old = ((appid_old | 0x80000000) << 32 | 0x02000000)
-
+                #TODO- Keep going from this line
                 apps.append({
                     "index": len(apps),
-                    "name": name_start_char.decode("utf-8"),
+                    "name": game_name.decode("utf-8"),
                     "appid": str(appid),
                     "type": "nonsteam-app",
                     "appid_old": str(appid_old)
