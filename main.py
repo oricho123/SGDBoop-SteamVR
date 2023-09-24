@@ -401,18 +401,16 @@ def get_source_mods(asset_type):
                             break
         except FileNotFoundError:
             log_error(f"File registry.vdf could not be found in {reg_file_location}", 96)
-            return None
+            return []
 
     if not found_value:
         log_error(f"Could not find {reg_value} (either in regedit or registry.vdf)", 97)
-        return None
+        return []
 
     source_mods = []
-    mods_count = 0
 
     for dir_entry in os.listdir(source_mod_path):
         dir_path = os.path.join(source_mod_path, dir_entry)
-        game_info_path = ""
 
         if goldsource:
             # Goldsource mods
@@ -426,41 +424,45 @@ def get_source_mods(asset_type):
 
         try:
             with open(game_info_path, "r") as fp:
-                lines = fp.readlines()
-                mod_name = ""
-                steam_app_id = None
-                found_game_key = False
+                if "game" in line and not line.strip().startswith("//") and not found_game_key:
+                    match = re.search(r'"([^"]*)"', line)
+                    if match:
+                        if goldsource:
+                            # Skip folders that are supposed to be skipped
+                            skip_folders = ["bshift", "cstrike", "czero", "czeror", "dmc", "dod", "gearbox", "ricochet",
+                                            "tfc", "valve"]
+                            if dir_entry in skip_folders:
+                                continue
+                        mod_name = match.group(1)
+                        found_game_key = True
 
-                for line in lines:
-                    comment_char = re.search(r"//", line)
-                    name_start_char = re.search(r"game", line)
-                    steam_app_id_start_char = re.search(r"SteamAppId", line)
+                if "SteamAppId" in line and found_game_key:
+                    steam_app_id_match = re.search(r'\d+', line)
+                    if steam_app_id_match:
+                        steam_app_id = steam_app_id_match.group()
 
-                    if name_start_char and not comment_char and not found_game_key:
-                        name_start_char = re.search(r"\"(.+)\"", line)
-                        if name_start_char:
-                            mod_name = name_start_char.group(1)
-                            found_game_key = True
+                        hex_index = len(source_mods)
+                        if goldsource:
+                            hex_index += len(
+                                source_mods)  # Gold source mods mode must be called after normal source mods
 
-                    if steam_app_id_start_char and found_game_key:
-                        steam_app_id_start_char = re.search(r"SteamAppId\s+(\d+)", line)
-                        if steam_app_id_start_char:
-                            steam_app_id = int(steam_app_id_start_char.group(1))
-                            break
+                        appid_old = str(crc_fast(dir_entry.encode('utf-8')))
+                        if goldsource:
+                           appid_old = str(
+                                ((int(appid_old, 16) | 0x80000000) << 32 | 0x02000000) - 0x1000000 + 70)
+                        else:
+                            appid_old = str(
+                                ((int(appid_old, 16) | 0x80000000) << 32 | 0x02000000) + int(
+                                    steam_app_id) - 0x1000000)
+                        source_mods.append({
+                            "name": mod_name,
+                            "appid": steam_app_id,
+                            "appid_old": appid_old,
+                        })
+                        break
 
-                if mod_name and steam_app_id is not None:
-                    source_mods.append({
-                        "name": mod_name,
-                        "steam_app_id": steam_app_id
-                    })
-                    mods_count += 1
         except FileNotFoundError:
             continue
-
-    if goldsource:
-        _goldSourceModsCount = mods_count
-    else:
-        _sourceModsCount = mods_count
 
     return source_mods
 
@@ -496,7 +498,6 @@ def get_non_steam_apps(include_mods):
 
             # Parse the vdf content
             while b"\x01AppName" in parsing_char:
-                appid_old = 0
                 appid = 0
 
                 # Find app name
@@ -748,6 +749,7 @@ def main(argc, argv):
                         include_mods = 0
 
                     # Get non-steam apps
+                    include_mods = False # Couldn't test the mods option
                     apps = get_non_steam_apps(include_mods)
 
                     # Show selection screen and return the struct
