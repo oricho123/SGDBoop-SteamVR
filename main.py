@@ -1,13 +1,14 @@
-import os
-import subprocess
-import re
-import sys
-import time
-import requests
 import ctypes
-import platform
 import ctypes.wintypes
 import errno
+import os
+import platform
+import re
+import subprocess
+import sys
+import time
+
+import requests
 
 # Constants
 API_VERSION = "2"
@@ -448,7 +449,7 @@ def get_source_mods(asset_type):
 
                         appid_old = str(crc_fast(dir_entry.encode('utf-8')))
                         if goldsource:
-                           appid_old = str(
+                            appid_old = str(
                                 ((int(appid_old, 16) | 0x80000000) << 32 | 0x02000000) - 0x1000000 + 70)
                         else:
                             appid_old = str(
@@ -488,7 +489,7 @@ def get_non_steam_apps(include_mods):
             while current_file_byte < len(file_content):
                 if file_content[current_file_byte] == 0x00:
                     file_content = file_content[:current_file_byte] + b'\x03' + file_content[
-                                                                                          current_file_byte + 1:]
+                                                                                current_file_byte + 1:]
                 current_file_byte += 1
 
             file_content = file_content[:-2] + b'\x08\x03'
