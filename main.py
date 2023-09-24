@@ -609,12 +609,10 @@ def create_old_id_symlink(app_data, steam_dest_dir):
     target_path = os.path.join(steam_dest_dir, app_data["appid"] + ".jpg")
 
     try:
-        os.symlink(target_path, link_path)
-        return 0
-    except OSError as e:
-        error_message = f"Could not create symlink for file: {link_path}. If you're having issues, try deleting this file and apply the asset again."
-        log_error(error_message, 99)
+        os.link(target_path, link_path)
         return 1
+    except OSError as e:
+        return 0
 
 
 # Function to update shortcuts.vdf with the new icon value
@@ -759,7 +757,6 @@ def main(argc, argv):
 
                 app_id = non_steam_app_data["appid"]
 
-            # Get Steam base dir
             steam_dest_dir = get_steam_destination_dir(asset_type, non_steam_app_data)
             if steam_dest_dir is None:
                 exit_with_error("Could not locate Steam destination directory.", 83)
@@ -767,8 +764,6 @@ def main(argc, argv):
             # Download asset file
             outfilename = download_asset_file(app_id, asset_url, asset_type, orientation, steam_dest_dir,
                                               non_steam_app_data)
-            if outfilename is None:
-                exit_with_error("Could not download asset file.", 84)
 
             # Non-Steam specific actions
             if non_steam_app_data:
