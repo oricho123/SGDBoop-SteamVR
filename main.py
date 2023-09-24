@@ -580,8 +580,6 @@ def get_non_steam_apps(include_mods):
 
 # Function to select a non-Steam app from a dropdown list and return its ID
 def select_non_steam_app(sgdb_name, apps):
-    app_data = None
-
     title = f"SGDBoop: Pick a game for '{sgdb_name}'"
 
     values = [app["name"] for app in apps]
@@ -599,12 +597,10 @@ def select_non_steam_app(sgdb_name, apps):
         exit(0)
 
     # Find the matching app
-    for app in apps:
-        if app["name"] == values[retval - 1]:
-            app_data = app
-            break
-
-    return app_data
+    try:
+        return next(app for app in apps if app["name"] == values[retval - 1])
+    except StopIteration:
+        return {}
 
 
 # Function to create a symlink for a file that has the old nonsteam appid format
