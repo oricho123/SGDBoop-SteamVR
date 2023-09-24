@@ -491,7 +491,7 @@ def get_non_steam_apps(include_mods):
 
             file_content = file_content[:-2] + b'\x08\x03'
             parsing_char = file_content
-            parsing_appid = bytearray()
+            parsing_char_index = 0
             int_bytes = [0, 0, 0, 0]
 
             # Parse the vdf content
@@ -504,11 +504,9 @@ def get_non_steam_apps(include_mods):
                 # Find exe path
                 exe_path = re.search(b"(?<=Exe\x03)(.*?)(?=\s*\x03)", parsing_char).group()
 
-                appid_index = parsing_char.find(b"\x02appid")
-                appid_ptr = parsing_char[appid_index:]
+                appid_index = parsing_char.find(b"\x02appid") + parsing_char_index
 
-                app_block_end_index = re.search(b"\x08\x00|\x08\x03",parsing_char).start()
-                app_block_end_ptr = parsing_char[app_block_end_index + 1:]
+                app_block_end_index = re.search(b"\x08\x00|\x08\x03",parsing_char).start() + 1 + + parsing_char_index
 
                 # If appid was found in this app block
                 if appid_index > 0 and appid_index < app_block_end_index:
@@ -524,11 +522,7 @@ def get_non_steam_apps(include_mods):
                              (int_bytes[3]))
 
                 # Calculate old app id
-                # name_end_char = game_name.decode("utf-8")
-                # exe_end_char = exe_path.decode("utf-8")
-
-                parsing_appid.extend(exe_path)
-                parsing_appid.extend(game_name)
+                parsing_appid = bytearray(exe_path+game_name)
                 appid_old = crc_fast(parsing_appid)
 
                 if appid == 0:
@@ -537,7 +531,6 @@ def get_non_steam_apps(include_mods):
                 # Do math magic. Valve pls fix
                 appid = ((appid | 0x80000000) << 32 | 0x02000000) >> 32
                 appid_old = ((appid_old | 0x80000000) << 32 | 0x02000000)
-                #TODO- Keep going from this line
                 apps.append({
                     "index": len(apps),
                     "name": game_name.decode("utf-8"),
@@ -547,7 +540,8 @@ def get_non_steam_apps(include_mods):
                 })
 
                 # Move parser to end of app data
-                parsing_char = file_content[app_block_end_ptr + 2:]
+                parsing_char_index = app_block_end_index + 2
+                parsing_char = file_content[parsing_char_index:]
 
     except FileNotFoundError:
         exit_with_error("Couldn't find shortcuts.vdf file", 95)
