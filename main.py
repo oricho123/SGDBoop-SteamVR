@@ -194,8 +194,9 @@ def download_asset_file(app_id, url, asset_type, orientation, destination_dir, n
             fp.write(response.content)
 
         return outfilename
-    except requests.exceptions.RequestException as e:
-        os.remove(outfilename)
+    except (EnvironmentError, requests.exceptions.RequestException) as e:
+        exit_with_error(f"Couldn't download asset file- {outfilename}",
+                        e.response.status_code if hasattr(e, 'response') else -1)
         return None
 
 
@@ -336,9 +337,8 @@ def get_most_recent_user(steam_base_dir):
 
 
 # Function to get Steam's destination directory based on artwork type
-def get_steam_destination_dir(steam_base_dir, asset_type, non_steam_app_data):
-    if not steam_base_dir:
-        return None
+def get_steam_destination_dir(asset_type, non_steam_app_data):
+    steam_base_dir = get_steam_base_dir()
 
     if asset_type == "icon" and non_steam_app_data is None:
         # If it's a Steam app icon
