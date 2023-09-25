@@ -493,7 +493,7 @@ def get_non_steam_apps(include_mods):
                                                                                 current_file_byte + 1:]
                 current_file_byte += 1
 
-            file_content = file_content[:-2] + b'\x08\x03'
+            file_content += b'\x08\x03'
             parsing_char = file_content
             parsing_char_index = 0
             int_bytes = [0, 0, 0, 0]
@@ -629,11 +629,10 @@ def update_vdf(app_data, file_path):
     try:
         with open(shortcuts_vdf_path, "rb") as fp:
             file_content = fp.read()
-            real_file_content = file_content
 
             # Load the vdf in memory and fix string-related issues
             file_content = file_content.replace(b"\x00", b"\x03")
-            file_content = file_content[:-2] + b'\x08\x03'
+            file_content += b'\x08\x03'
 
             app_block_start = file_content
             icon_start_char = None
@@ -666,19 +665,21 @@ def update_vdf(app_data, file_path):
                 # icon_start_char = icon_start_char if icon_start_char != -1 else 0
 
                 # Set the new file contents
-                new_file_content = real_file_content[
-                                   :app_block_index + icon_start_char] + icon_content + real_file_content[
+                new_file_content = file_content[
+                                   :app_block_index + icon_start_char] + icon_content + file_content[
                                                                                         app_block_index + icon_end_char + 1:]
+                new_file_content = new_file_content.replace(b"\x03", b"\x00")
 
                 # Write the file back
+                # TODO: try to oneline write it
                 with open(shortcuts_vdf_path, "wb") as fp_w:
-                    fp_w.write(new_file_content)
-                    # for i in range(len(new_file_content) - 2):
+                    # fp_w.write(new_file_content)
+                    for i in range(len(new_file_content) - 2):
                     #     # Revert 0x03 to 0x00
                     #     if new_file_content[i] == 0x03:
                     #         new_file_content[i] = 0x00
                     #     # Write byte to file
-                    #     fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
+                    fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
 
     except FileNotFoundError:
         exit_with_error("Shortcuts vdf could not be found.", 93)
@@ -711,7 +712,6 @@ def main(argc, argv):
 
         # Test mode
         if argv[1] == "sgdb://boop/test":
-
             # Enable IUP GUI and show a message
             # IupOpen(argc, argv)
             # load_iup_icon()
@@ -744,13 +744,14 @@ def main(argc, argv):
                     # IupOpen(argc, argv)
                     # load_iup_icon()
 
+                    ## TODO: move this section outside the for
                     # Do not include mods in the dropdown list if the only asset selected was an icon
                     include_mods = 1
                     if types == "icon" or (types == "steam" and asset_type == "icon"):
                         include_mods = 0
 
                     # Get non-steam apps
-                    include_mods = False # Couldn't test the mods option
+                    include_mods = False  # Couldn't test the mods option
                     apps = get_non_steam_apps(include_mods)
 
                     # Show selection screen and return the struct
