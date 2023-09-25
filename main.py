@@ -675,11 +675,11 @@ def update_vdf(app_data, file_path):
                 with open(shortcuts_vdf_path, "wb") as fp_w:
                     # fp_w.write(new_file_content)
                     for i in range(len(new_file_content) - 2):
+                        fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
                     #     # Revert 0x03 to 0x00
                     #     if new_file_content[i] == 0x03:
                     #         new_file_content[i] = 0x00
                     #     # Write byte to file
-                    fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
 
     except FileNotFoundError:
         exit_with_error("Shortcuts vdf could not be found.", 93)
