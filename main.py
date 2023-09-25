@@ -633,21 +633,21 @@ def update_vdf(app_data, file_path):
 
             # Load the vdf in memory and fix string-related issues
             file_content = file_content.replace(b"\x00", b"\x03")
-            file_content += b'\x08\x03'
+            file_content = file_content[:-2] + b'\x08\x03'
 
             app_block_start = file_content
-            app_block_end_ptr = file_content
             icon_start_char = None
             icon_end_char = None
             icon_content = bytearray(b"\x01icon\x03" + file_path.encode() + b"\x03")
-
+            app_block_index = 0
+            app_block_end_index = -2
             # Find the app's block
             for _ in range(app_data["index"] + 1):
-                app_block_start = app_block_end_ptr
-                app_block_end_ptr = app_block_start.find(b"\x08", app_block_start) + 1
-                while app_block_end_ptr < len(file_content) and (
-                        file_content[app_block_end_ptr] != 0x03 and file_content[app_block_end_ptr] != 0x00):
-                    app_block_end_ptr = app_block_start.find(b"\x08", app_block_end_ptr) + 1
+                app_block_index += app_block_end_index + 2
+                app_block_start = app_block_start[app_block_end_index + 2:]
+                # TODO check if last one doesnt ruin it
+                app_block_end_index = re.search(b"\x08\x00|\x08\x03", app_block_start).start() + 1
+
 
             if app_block_start:
                 # Find icon key
@@ -655,28 +655,30 @@ def update_vdf(app_data, file_path):
                 icon_end_char = app_block_start.find(b"\x03", icon_start_char) + 1
                 icon_end_char = app_block_start.find(b"\x03", icon_end_char)
 
-                exe_start_char = app_block_start.find(b"\x01exe") + 5
+                exe_start_char = app_block_start.find(b"\x01Exe") + 5
                 exe_end_char = app_block_start.find(b"\x03", exe_start_char)
 
-                if icon_start_char == -1 or icon_start_char > app_block_end_ptr:
+                if icon_start_char == -1 or icon_start_char > app_block_end_index:
                     # Didn't find icon block
                     icon_start_char = exe_end_char + 1
                     icon_end_char = icon_start_char
 
-                icon_start_char = icon_start_char if icon_start_char != -1 else 0
+                # icon_start_char = icon_start_char if icon_start_char != -1 else 0
 
                 # Set the new file contents
-                new_file_content = real_file_content[:icon_start_char] + icon_content + real_file_content[
-                                                                                        icon_end_char + 1:]
+                new_file_content = real_file_content[
+                                   :app_block_index + icon_start_char] + icon_content + real_file_content[
+                                                                                        app_block_index + icon_end_char + 1:]
 
                 # Write the file back
                 with open(shortcuts_vdf_path, "wb") as fp_w:
-                    for i in range(len(new_file_content) - 2):
-                        # Revert 0x03 to 0x00
-                        if new_file_content[i] == 0x03:
-                            new_file_content[i] = 0x00
-                        # Write byte to file
-                        fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
+                    fp_w.write(new_file_content)
+                    # for i in range(len(new_file_content) - 2):
+                    #     # Revert 0x03 to 0x00
+                    #     if new_file_content[i] == 0x03:
+                    #         new_file_content[i] = 0x00
+                    #     # Write byte to file
+                    #     fp_w.write(new_file_content[i].to_bytes(1, byteorder='big'))
 
     except FileNotFoundError:
         exit_with_error("Shortcuts vdf could not be found.", 93)
