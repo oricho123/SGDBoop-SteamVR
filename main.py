@@ -486,6 +486,7 @@ def get_non_steam_apps(include_mods):
             current_file_byte = 0
 
             # Load the vdf in memory and fix string-related issues
+            # TODO: call file_content = file_content.replace(b"\x00", b"\x03") instead
             while current_file_byte < len(file_content):
                 if file_content[current_file_byte] == 0x00:
                     file_content = file_content[:current_file_byte] + b'\x03' + file_content[
@@ -497,6 +498,9 @@ def get_non_steam_apps(include_mods):
             parsing_char_index = 0
             int_bytes = [0, 0, 0, 0]
 
+            # To get all the names:
+            # game_names = re.findall(b"(?<=AppName\x03)(.*?)(?=\s*\x03)", parsing_char)
+            # exe_locations = re.findall(b"(?<=Exe\x03)(.*?)(?=\s*\x03)", parsing_char)
             # Parse the vdf content
             while b"\x01AppName" in parsing_char:
                 appid = 0
@@ -508,7 +512,7 @@ def get_non_steam_apps(include_mods):
 
                 appid_index = parsing_char.find(b"\x02appid") + parsing_char_index
 
-                app_block_end_index = re.search(b"\x08\x00|\x08\x03",parsing_char).start() + 1 + + parsing_char_index
+                app_block_end_index = re.search(b"\x08\x00|\x08\x03", parsing_char).start() + 1 + parsing_char_index
 
                 # If appid was found in this app block
                 if appid_index > 0 and appid_index < app_block_end_index:
